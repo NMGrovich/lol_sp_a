@@ -25,6 +25,17 @@ pacman::p_load(
 usernames <- c()
 ACP <- c()
 
+#Read champion roles from csv file.
+champ_roles <-
+  read_csv("data/Champion_roles_id.csv", show_col_types = FALSE)
+
+role_legend = c(
+  "Top" =  "#CD853F", 
+  "Jungle" = "#9ACD32", 
+  "Mid" = "#7B68EE", 
+  "Bottom" = "#FDFD96",  
+  "Support" = "#DDA0DD")
+
 num_players <- readline(prompt = "Enter number of players:") %>%
   as.integer() %>%
   str_replace_all(" ", "%20")
