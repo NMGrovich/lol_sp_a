@@ -1,0 +1,156 @@
+---
+title: "LOL_Searcher"
+author: "Nicholas Grovich"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(  
+  "tidyverse",
+  "dplyr",
+  "rvest",
+  "robotstxt",
+  "jsonlite",
+  "gridExtra",
+  "cowplot",
+  "ggpubr",
+  "RSelenium",
+  "lubridate",
+  "rjson")
+```
+
+```{R getUserInfo}
+usernames <- c()
+ACP <- c()
+
+num_players <- readline(prompt = "Enter number of players:") %>%
+  as.integer() %>%
+  str_replace_all(" ", "%20")
+
+counter <- as.integer(0)
+
+while (counter < num_players) {
+  username <- readline(prompt = "Enter username: ")
+  usernames <- append(usernames, username)
+  counter = counter + 1
+}
+
+# Setup for Rselenium
+selCommand <-
+  wdman::selenium(
+    jvmargs = c("-Dwebdriver.chrome.verboseLogging=true"),
+    retcommand = TRUE
+  )
+# Wait 2 seconds so it all runs smoothly
+Sys.sleep(2)
+# Minimize the window and wait
+shell(selCommand, wait = FALSE, minimized = TRUE)
+# Wait 2 seconds so it all runs smoothly
+Sys.sleep(2)
+#the default port a Selenium Server is run on using the rsDriver function
+remdr <- remoteDriver(port = 4567L, browserName = "firefox")
+Sys.sleep(2)
+
+# Open firefox
+remdr$open()
+
+# Start of loop to gather data
+for (user in usernames) {
+  # Navigate to the constructed URLw
+  remdr$navigate(
+    url = paste0(
+      'https://app.mobalytics.gg/lol/profile/na/',
+      user,
+      '/champion-pool?c_queue=RANKED_SOLO'
+    )
+  )
+  # Scroll to the bottom of the page so it all loads
+  bodyEl <- remdr$findElement("css", "body")
+  for (i in 1:10) {
+    bodyEl$sendKeysToElement(list(key = "end"))
+    # Good practice to have a wait so the page can load the new content
+    Sys.sleep(1)
+  }
+  
+  # Get the page source and assign it to a variable.
+  pgSrc <- remdr$getPageSource()
+  page <- read_html(pgSrc[[1]])
+  
+  name <- page %>%
+    html_nodes('.m-arwevg') %>%
+    html_text()
+  
+  games <- page %>%
+    html_nodes('.evtsfex0') %>%
+    html_text() %>%
+    as.double()
+  
+  WinRatio <- page %>%
+    html_nodes('td:nth-child(7)') %>%
+    html_text() %>%
+    str_remove_all("%") %>%
+    as.double()
+  
+  WinRatio <- (WinRatio / 100)
+  
+  
+  kda <- page %>%
+    html_nodes('.m-mmnop4') %>%
+    html_text() %>%
+    str_replace_all(" ", "-") %>%
+    str_replace_all("--", "-") %>%
+    str_remove_all("[(]") %>%
+    str_remove_all("[)]")
+  
+  
+  individual_Champion_Pool <-
+    tibble(user, games, name, WinRatio, kda) #Create tibble from web scraped data
+  individual_Champion_Pool[c("AVG_Kills", "AVG_Deaths", "AVG_Assists", "KDA")] <-
+    str_split_fixed(individual_Champion_Pool$kda, "-", 4) #Split character KDA into separate columns
+  individual_Champion_Pool = select(individual_Champion_Pool,-5) #remove old string KDA, we don't need it
+  
+  ACP <-
+    rbind(ACP, individual_Champion_Pool) #combine them into a tibble called ACP (All_Champion_Pool)
+}
+# Close the browser we opened
+remdr$close()
+
+    ACP <- ACP %>%
+      right_join(champ_roles, by = c("name"))
+
+```
+
+```{r graphuserinfo}
+
+for(users in usernames) {
+  userGraph <- ACP %>%
+    filter(user == users) %>%
+    head(10) %>%
+    ggplot(aes(
+      x = reorder(name, -games),
+      y = games,
+      fill = role1,
+      label = scales::percent(WinRatio, accuracy = 0.01)
+    )) +
+    geom_bar(stat = "identity", color = "black") +
+    xlab("") + # x-axis title
+    ylab("Total Games") + # y-axis title
+    ggtitle(paste0(users, "'s Ranked Stats")) +
+    geom_text(vjust = -0.5, size = 4) +
+    #Build title using the index of loop
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      #Center title of graph
+      text = element_text(size = 13),
+      legend.position = "left"
+    ) +
+    labs(fill = "Class") +
+    scale_fill_manual(values = role_legend, drop = FALSE)
+
+  
+  print(userGraph)
+}
+
+```
