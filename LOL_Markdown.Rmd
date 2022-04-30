@@ -38,13 +38,6 @@ output:
 
 ### We gather the data from webscraping a few websites. The first website is called OP.GG and Riot Games has given them an API to use to easily gather this data. As the information is stored in a JSON, we can use the library jsonlite to get the information. Once we have successfully obtained this information in a list of lists, we can access the list and turn in into a tibble to start tidying the data. The second website we scrap is leagueofgraphs to get the overall ranked distribution of the regions we are looking at, and the average game length time.
 
-```{r pacman_setup, include=FALSE}
-# Run this ONE-TIME ONLY to install
-# the pacman package loader, This 
-# makes downloading and loading the 
-# packages much easier and neater.
-# install.packages("pacman")
-```
 
 ```{r libraries, include=FALSE}
 #1. Download & Load Libraries
