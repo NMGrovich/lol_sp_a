@@ -99,7 +99,7 @@ champ_roles <-
 #Get all champion data from json.
 #Region doesn't matter, all champions are the same across all regions.
 champion_id_json <-
-  fromJSON("https://na.op.gg/api/meta/champions?hl=en_US") %>%
+  jsonlite::fromJSON("https://na.op.gg/api/meta/champions?hl=en_US") %>%
   map_if(is.data.frame, list) %>%
   as_tibble()
 
@@ -112,7 +112,7 @@ champ_info_tibble <- as_tibble(champion_id_json[[1]][[1]]) %>%
 for (region in allRegions) {
   for (rank in allranks) {
     stats_json <-
-      fromJSON(
+      jsonlite::fromJSON(
         paste0(
           'https://',
           region,
