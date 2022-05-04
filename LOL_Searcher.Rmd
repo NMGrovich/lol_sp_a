@@ -155,6 +155,7 @@ for(users in usernames) {
       plot.title = element_text(hjust = 0.5),
       #Center title of graph
       text = element_text(size = 13),
+      axis.text.x = element_text(size = 13, angle = 75, hjust = 1),
       legend.position = "left"
     ) +
     labs(fill = "Class") +
